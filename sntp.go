@@ -55,15 +55,16 @@ func (s *Server) ListenAndServe(ctx context.Context, addr string) error {
 	if err != nil {
 		return fmt.Errorf("error listening on UDP: %w", err)
 	}
-	defer conn.Close()
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	go func() {
+		<-ctx.Done()
+		conn.Close()
+	}()
 
 	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-		}
-
 		req := make([]byte, binary.Size(types.Packet{}))
 		n, addr, err := conn.ReadFromUDP(req)
 		recvTimestamp := time.Now()
